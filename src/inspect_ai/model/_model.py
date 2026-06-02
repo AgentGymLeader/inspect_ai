@@ -216,6 +216,11 @@ class ModelAPI(abc.ABC):
         self.base_url = base_url
         self.api_key = api_key
         self.api_key_vars = api_key_vars
+        # Stash the caller-supplied value so initialize() can re-run the
+        # override hook from scratch. Hooks that *transform* the value (e.g.
+        # aws-secretsmanager://arn → short-lived STS payload) otherwise leave
+        # self.api_key as the resolved payload, which the hook can't refresh.
+        self._initial_api_key = api_key
         self._apply_api_key_overrides()
 
     def _apply_api_key_overrides(self) -> None:
@@ -254,6 +259,7 @@ class ModelAPI(abc.ABC):
 
         This can be used to reinitialize the API keys.
         """
+        self.api_key = self._initial_api_key
         self._apply_api_key_overrides()
 
     async def aclose(self) -> None:
